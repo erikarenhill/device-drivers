@@ -25,7 +25,7 @@ DRIVER = {
   id           = "easee_cloud",
   name         = "Easee Cloud",
   manufacturer = "Easee",
-  version      = "1.3.4",
+  version      = "1.3.5",
   protocols    = { "http" },
   capabilities = { "ev" },
   description  = "Easee Home/Charge via Cloud REST API. No local protocol needed.",
@@ -458,6 +458,8 @@ local REASON_LABELS = {
 }
 
 local email, password, configured_max_a
+local device_limit_a, device_limit_read_ms
+local settings_poll_ms = 0
 
 -- read_settings GETs the charger's static config block (phaseMode,
 -- maxChargerCurrent, etc.) and surfaces it via the init log so the
@@ -554,12 +556,18 @@ function driver_init(config)
     if settings then
         local fw_pm = tonumber(settings.phaseMode)
         local fw_max = tonumber(settings.maxChargerCurrent)
+        if fw_max and fw_max >= 0 and fw_max <= EASEE_MAX_A then
+            device_limit_a, device_limit_read_ms = fw_max, host.millis()
+        end
+        settings_poll_ms = host.millis()
         host.log("info", "Easee: firmware settings — phaseMode=" .. tostring(fw_pm) ..
             " (1=1p,2=auto,3=3p), maxChargerCurrent=" .. tostring(fw_max) .. "A")
         -- Apply the operator's max_charger_current clamp if it differs.
         if configured_max_a and fw_max ~= configured_max_a then
             local werr = write_setting(charger_serial, {maxChargerCurrent = configured_max_a})
             if werr == nil then
+                device_limit_a, device_limit_read_ms = nil, nil -- wait for readback
+                settings_poll_ms = host.millis() - 60000
                 host.log("info", "Easee: maxChargerCurrent clamped to " ..
                     tostring(configured_max_a) .. " A (was " .. tostring(fw_max) .. " A)")
             else
@@ -681,6 +689,7 @@ function driver_poll()
         request_active = false
     end
 
+    local limit_age_s = device_limit_read_ms and (host.millis() - device_limit_read_ms) / 1000
     host.emit("ev", {
         w                       = power_w,
         connected               = connected,
@@ -699,6 +708,8 @@ function driver_poll()
         reason_no_current_label = reason_code and REASON_LABELS[reason_code], -- nil if 0/ok, string otherwise
         is_online               = is_online,
         cable_locked            = cable_locked,
+        device_limit_a          = device_limit_a,
+        device_limit_age_s      = limit_age_s,
         max_a                   = dyn_current,                 -- last-set dynamic limit (echoes our write, may lag)
         actual_amps_per_phase   = actual_amps_per_phase,       -- live per-phase A derived from totalPower
         phases                  = phases,                      -- our committed phase count (1 or 3)
@@ -740,6 +751,17 @@ function driver_poll()
     end
     if dyn_current then
         host.emit_metric("ev_dynamic_current_a", dyn_current)
+    end
+
+    -- Static ceiling and dynamic offer are different. Refresh the ceiling
+    -- once a minute and report its age even when a later read fails.
+    if now - settings_poll_ms >= 60000 then
+        settings_poll_ms = now
+        local settings = read_settings(charger_serial)
+        local limit = settings and tonumber(settings.maxChargerCurrent)
+        if limit and limit >= 0 and limit <= EASEE_MAX_A then
+            device_limit_a, device_limit_read_ms = limit, host.millis()
+        end
     end
 
     return 5000

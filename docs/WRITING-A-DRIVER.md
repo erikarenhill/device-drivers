@@ -375,3 +375,24 @@ moves the manifest and the `DRIVER` table together.
 37 drivers came from FTW in #27; `baselines/ftw/drivers/` records what they
 were. All of them have changed since, and the same rules apply to every
 driver.
+
+## Control feedback
+
+Optional `host.emit` fields let Core compare commands with device readings in
+all modes. They never grant control or replace a safety limit:
+
+- `setpoint_w`: a fresh device register read, in site signs. Do not echo a
+  command or emit zero when the read fails.
+- `control_power_w`: fresh measured power at the command's boundary, in site
+  signs. Pixii uses AC power here and retains DC power in `w`.
+  Set `control_power_available=false` when that measurement fails, so Core
+  cannot fall back to DC and claim a response.
+- `device_limit_a`: the charger's own configured current ceiling, separate
+  from the dynamic offer in `max_a`. `device_limit_age_s` is time since the
+  successful settings read. Failed reads must not reset its age. Core stops
+  treating it as a current limit after two minutes.
+
+A device reading supplies Tier 1 evidence only. Core needs an identified,
+separate site meter and a matching measured change for Tier 2. Driver output
+must never claim independent confirmation from another field of the same
+sensor.

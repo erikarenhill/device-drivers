@@ -156,7 +156,10 @@
         "available_charge_Wh",
         "available_discharge_Wh",
         "available_charge_W",
-        "available_discharge_W"
+        "available_discharge_W",
+        "setpoint_w",
+        "control_power_w",
+        "control_power_available"
       ],
       "inverter": [
         "W",
@@ -194,6 +197,10 @@
         "L3_W",
         "total_import_Wh",
         "total_export_Wh"
+      ],
+      "ev": [
+        "device_limit_a",
+        "device_limit_age_s"
       ]
     },
     "repeating_structures": "A repeating structure is a plural-named array, not numbered keys. pv.mppts is a list of {V, A, W} whose length is what the device physically has. The catalog's mppt1_v/mppt2_v cannot represent a four-MPPT inverter at all.",
@@ -203,7 +210,7 @@
       ],
       "reason": "@srcful/data-models has no agreed v2x_charger shape, and Blixt has no v2x driver to take the naming from. The 13 chargers here keep the short keys until one exists; guessing a schema would be worse than saying it is undecided."
     },
-    "streams_vs_ders": "inverter is an emit STREAM, not a DER type: a battery or hybrid driver reports its AC stage (W, per-phase, rated_W, available_import_W / available_export_W headroom) on host.emit(\"inverter\", ...) while the device itself is declared as ders: [battery] (or [battery, pv]). Blixt L1 feeds the headroom keys into its arbitrator clamp and reads them by exact name — they have no lowercase fallback."
+    "streams_vs_ders": "inverter is an emit STREAM, not a DER type: a battery or hybrid driver reports its AC stage (W, per-phase, rated_W, available_import_W / available_export_W headroom) on host.emit(\"inverter\", ...) while the device itself is declared as ders: [battery] (or [battery, pv]). Blixt L1 feeds the headroom keys into its arbitrator clamp and reads them by exact name \u2014 they have no lowercase fallback."
   },
   "write_result_semantics": {
     "ftw-core": "returns error string on failure, nothing on success; never raises",

@@ -3,8 +3,9 @@ dofile("drivers/tests/lua_harness/host_mock.lua")
 -- keep reporting that old change time as when the power was observed.
 local driver = "drivers/lua/easee_cloud.lua"
 host.reset()
+host._millis_step = 0
 host._http_responses["/accounts/login"] = '{"accessToken":"test","expiresIn":3600}'
-host._http_responses["/config"] = '{}'
+host._http_responses["/config"] = '{"maxChargerCurrent":8}'
 host._http_responses["/sessions/ongoing"] = '{}'
 dofile(driver)
 driver_init({email="test@example.invalid",password="test",serial="TEST123"})
@@ -23,6 +24,8 @@ end
 
 local first = poll(3, 4.92, "2026-09-25T00:21:20Z")
 assert(first.power_observed_at == "2026-09-25T00:21:20Z", "a new value lost its source time")
+assert(first.device_limit_a == 8 and first.device_limit_age_s == 0, "static ceiling was lost")
+assert(first.max_a == nil, "static ceiling replaced dynamic readback")
 local steady = poll(3, 4.92, "2026-09-25T00:21:20Z")
 assert(steady.power_observed_at == nil,
     "an unchanged value kept its old change time: " .. tostring(steady.power_observed_at))
@@ -34,3 +37,13 @@ local _, before = poll(3, 6.30, "2026-09-25T00:29:20Z")
 local _, after = poll(0, 6.30, "2026-09-25T00:29:20Z")
 assert(after == before, "an offline charger emitted a sample")
 print("Easee power time: passed")
+
+host._millis_counter = host._millis_counter + 60000
+host._http_responses["/config"] = '{"maxChargerCurrent":16}'
+poll(3, 6.30, "2026-09-25T00:29:20Z") -- optional settings refresh follows power emit
+local refreshed = poll(3, 6.30, "2026-09-25T00:29:20Z")
+assert(refreshed.device_limit_a == 16 and refreshed.device_limit_age_s == 0, "ceiling did not refresh")
+host._millis_counter = host._millis_counter + 180000
+host._http_responses["/config"] = '{}'
+local missing = poll(3, 6.30, "2026-09-25T00:29:20Z")
+assert(missing.device_limit_age_s == 180, "missing read made cached limit look fresh")

@@ -1,5 +1,17 @@
 # Changelog
 
+## pixii 2.1.7
+
+Read the setpoint on every poll, including outside troubleshooting mode. Emit
+its site-signed value and measured AC power for command feedback. Missing
+reads remain unknown. No change to commands, heartbeat or safety policy.
+
+## easee_cloud 1.3.5
+
+Report the charger’s configured current ceiling separately from its dynamic
+current offer. Refresh it once a minute and preserve its age when a read
+fails, so Core can explain an 8 A ceiling even while the car charges.
+
 ## pixii 2.1.6
 
 Record the SunSpec status specifications in the manifest so the upstream

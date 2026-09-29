@@ -93,3 +93,19 @@ assert(not host._faulted)
 assert(host._metrics.battery_charge_status_code.value == {status})
 assert(host._metrics.battery_control_mode_code.value == 0, "remote control code 0 is valid")
 ''')
+
+
+def test_pixii_control_readback_without_troubleshooting():
+    run_lua('''
+host._modbus_registers.holding[39905] = {0, 1500}
+host._modbus_registers.holding[40083] = -1400
+local battery = poll(3)
+assert(battery.setpoint_w == -1500, "setpoint must use site signs outside TS mode")
+assert(battery.control_power_available == true)
+assert(battery.control_power_w == -1400, "command feedback must use AC, not DC")
+host._modbus_read_fail_addresses[39905] = "timeout"
+host._modbus_read_fail_addresses[40083] = "timeout"
+battery = poll(3)
+assert(battery.setpoint_w == nil, "failed read invented zero")
+assert(battery.control_power_w == nil and battery.control_power_available == false)
+''')
