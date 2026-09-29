@@ -1,5 +1,5 @@
 name: "sungrow"
-version: "1.5.9"
+version: "1.5.10"
 tier: core
 author: "Sourceful Labs AB"
 protocol: modbus
@@ -43,12 +43,18 @@ tested_devices:
     notes: "Commercial/industrial three-phase string inverter. Needs 1.5.3: 1.2.1 stopped polling the SH battery registers this family does not answer, and 1.5.3 refuses a battery dispatch instead of writing them. A zero-watt command is still written on every family from 1.5.4 -- it is the release, and on a model without the registers it fails harmlessly."
     min_driver_version: "1.5.3"
 min_host_version: "2.0.0"
-size_bytes: 48885
+size_bytes: 49623
 dkb_id: "sungrow_sh_rt"
-sha256: "9847c4281d4387b5d4c6a2e1d91c592ca2cbf32c06b872be2d68d46fe307f823"
+sha256: "29dfebe81976fd77971e8b5db14d65887384cdfb6889794eb312a13bcf666d07"
 signature: ""
 
 bytecode_sha256: ""
 bytecode_signature: ""
 bytecode_size: 0
 changelog: ""
+
+upstream_docs:
+  - url: "https://info-support.sungrowpower.com/application/pdf/2025/07/17/SHRT%20User%20Manual.pdf"
+    title: "SH-RT user manual: separate Smart Energy Meter connected over RS485, section 6.8"
+    kind: manual
+    url_stability: stable

@@ -182,7 +182,8 @@
       "pv": [
         "W",
         "total_generation_Wh",
-        "mppts"
+        "mppts",
+        "control_power_available"
       ],
       "meter": [
         "W",
@@ -197,7 +198,9 @@
         "L3_A",
         "L3_W",
         "total_import_Wh",
-        "total_export_Wh"
+        "total_export_Wh",
+        "power_origin",
+        "control_power_available"
       ],
       "ev": [
         "control_power_available",

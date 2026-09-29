@@ -1736,7 +1736,7 @@ manufacturers:
         protocols:
           - protocol: modbus
             driver: "sungrow"
-            version: "1.5.9"
+            version: "1.5.10"
             ders: [battery, meter, pv]
             control: true
         firmware_versions: ""
@@ -1747,7 +1747,7 @@ manufacturers:
         protocols:
           - protocol: modbus
             driver: "sungrow"
-            version: "1.5.9"
+            version: "1.5.10"
             ders: [battery, meter, pv]
             control: true
         firmware_versions: ""
@@ -1758,7 +1758,7 @@ manufacturers:
         protocols:
           - protocol: modbus
             driver: "sungrow"
-            version: "1.5.9"
+            version: "1.5.10"
             ders: [battery, meter, pv]
             control: true
         firmware_versions: ""
@@ -1769,7 +1769,7 @@ manufacturers:
         protocols:
           - protocol: modbus
             driver: "sungrow"
-            version: "1.5.9"
+            version: "1.5.10"
             ders: [battery, meter, pv]
             control: true
         firmware_versions: ""
@@ -1780,7 +1780,7 @@ manufacturers:
         protocols:
           - protocol: modbus
             driver: "sungrow"
-            version: "1.5.9"
+            version: "1.5.10"
             ders: [battery, meter, pv]
             control: true
         firmware_versions: ""

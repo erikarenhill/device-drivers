@@ -1,5 +1,11 @@
 # Changelog
 
+## sungrow 1.5.10
+
+Report the active forced setpoint from the existing holding-register read.
+Identify the separate grid meter on known hybrid models. Failed PV, meter or
+setpoint reads cannot supply control evidence. No extra Modbus requests.
+
 ## easee_cloud 1.3.6
 
 Keep the source timestamp for control evidence when the cloud repeats a power

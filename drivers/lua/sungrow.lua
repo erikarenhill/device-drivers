@@ -9,7 +9,7 @@ DRIVER = {
   id           = "sungrow",
   name         = "Sungrow SH Hybrid Inverter",
   manufacturer = "Sungrow",
-  version      = "1.5.9",
+  version      = "1.5.10",
   protocols    = { "modbus" },
   capabilities = { "meter", "pv", "battery", "pv-curtail" },
   description  = "Sungrow SH-series hybrid inverters with LFP battery, via Modbus TCP.",
@@ -535,6 +535,7 @@ function driver_poll()
 
     host.emit("pv", {
         w           = -pv_w,  -- negative = generation (EMS convention)
+        control_power_available = pv_regs ~= nil or mppt_regs ~= nil,
         mppt1_v     = mppt1_v,
         mppt1_a     = mppt1_a,
         mppt2_v     = mppt2_v,
@@ -640,6 +641,21 @@ function driver_poll()
         end
     end
 
+    -- EMS state diagnostics — what the inverter *actually* has latched
+    -- in its control registers right now. With the #164 write-order fix
+    -- these should track whatever the dispatcher sent last tick; any
+    -- drift between target and ems_force_w points at external writers
+    -- (iSolarCloud, HA integration, another EMS) racing the driver.
+    local emsd = nil
+    if hybrid_block_worth_reading() then
+        emsd = optional_read(13049, 3, "holding")
+    end
+    if emsd then
+        host.emit_metric("sungrow_ems_mode",  emsd[1]) -- 0=self, 2=forced, 3=ext
+        host.emit_metric("sungrow_force_cmd", emsd[2]) -- 0xAA=170 chg, 0xBB=187 dis, 0xCC=204 stop
+        host.emit_metric("sungrow_force_w",   emsd[3])
+    end
+
     if bat_regs then
         local battery = {
             w   = bat_w,
@@ -647,6 +663,13 @@ function driver_poll()
             a   = bat_a,
             soc = bat_soc,
         }
+        -- The holding registers, not the last command, supply this value.
+        -- Force power is inactive in self-consumption and external EMS modes.
+        if emsd and emsd[1] == 2 then
+            if emsd[2] == 0xAA then battery.setpoint_w = emsd[3]
+            elseif emsd[2] == 0xBB then battery.setpoint_w = -emsd[3]
+            elseif emsd[2] == 0xCC then battery.setpoint_w = 0 end
+        end
 
         -- Energy counters are separate reads. Add each only if it answered:
         -- a counter reported as zero would look like a reset meter.
@@ -665,21 +688,6 @@ function driver_poll()
         host.emit("battery", battery)
         host.emit_metric("battery_dc_v", bat_v)
         host.emit_metric("battery_dc_a", bat_a)
-    end
-
-    -- EMS state diagnostics — what the inverter *actually* has latched
-    -- in its control registers right now. With the #164 write-order fix
-    -- these should track whatever the dispatcher sent last tick; any
-    -- drift between target and ems_force_w points at external writers
-    -- (iSolarCloud, HA integration, another EMS) racing the driver.
-    local emsd = nil
-    if hybrid_block_worth_reading() then
-        emsd = optional_read(13049, 3, "holding")
-    end
-    if emsd then
-        host.emit_metric("sungrow_ems_mode",  emsd[1]) -- 0=self, 2=forced, 3=ext
-        host.emit_metric("sungrow_force_cmd", emsd[2]) -- 0xAA=170 chg, 0xBB=187 dis, 0xCC=204 stop
-        host.emit_metric("sungrow_force_w",   emsd[3])
     end
 
     -- Grid meter power: 5600-5601, I32 LE, watts (positive=import, negative=export)
@@ -732,8 +740,13 @@ function driver_poll()
         end
     end
 
+    -- 5600-5601 relay the external meter on the known SH register map.
+    local meter_origin = nil
+    if model_family == "hybrid" then meter_origin = "external_meter" end
     host.emit("meter", {
         w         = meter_w,
+        power_origin = meter_origin,
+        control_power_available = mw_regs ~= nil,
         l1_w      = l1_w,
         l2_w      = l2_w,
         l3_w      = l3_w,

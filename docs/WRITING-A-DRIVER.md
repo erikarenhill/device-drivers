@@ -400,3 +400,11 @@ A device reading supplies Tier 1 evidence only. Core needs an identified,
 separate site meter and a matching measured change for Tier 2. Driver output
 must never claim independent confirmation from another field of the same
 sensor.
+
+A meter may report `power_origin="external_meter"` when its documented
+register map reads a separate physical site meter through the inverter.
+This identifies the sensor, not a separate network connection. Never use it
+for power calculated from the inverter's own battery, PV or load readings.
+Use `power_origin="derived"` for such calculated meter values. Failed reads
+must set `control_power_available=false`; sensor identity alone cannot
+confirm a command.
