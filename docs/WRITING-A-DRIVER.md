@@ -387,6 +387,10 @@ all modes. They never grant control or replace a safety limit:
   signs. Pixii uses AC power here and retains DC power in `w`.
   Set `control_power_available=false` when that measurement fails, so Core
   cannot fall back to DC and claim a response.
+- `control_power_observed_at`: the power source's RFC 3339 timestamp. Keep it
+  unchanged when a cloud poll returns the same observation. Control checks
+  must not treat a new HTTP reply as a new physical sample. If power or its
+  required source time is missing, set `control_power_available=false`.
 - `device_limit_a`: the charger's own configured current ceiling, separate
   from the dynamic offer in `max_a`. `device_limit_age_s` is time since the
   successful settings read. Failed reads must not reset its age. Core stops

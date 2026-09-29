@@ -159,7 +159,8 @@
         "available_discharge_W",
         "setpoint_w",
         "control_power_w",
-        "control_power_available"
+        "control_power_available",
+        "control_power_observed_at"
       ],
       "inverter": [
         "W",
@@ -199,6 +200,8 @@
         "total_export_Wh"
       ],
       "ev": [
+        "control_power_available",
+        "control_power_observed_at",
         "device_limit_a",
         "device_limit_age_s"
       ]

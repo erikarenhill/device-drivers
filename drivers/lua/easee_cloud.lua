@@ -25,7 +25,7 @@ DRIVER = {
   id           = "easee_cloud",
   name         = "Easee Cloud",
   manufacturer = "Easee",
-  version      = "1.3.5",
+  version      = "1.3.6",
   protocols    = { "http" },
   capabilities = { "ev" },
   description  = "Easee Home/Charge via Cloud REST API. No local protocol needed.",
@@ -697,6 +697,10 @@ function driver_poll()
         request_active          = request_active,
         session_wh              = session_wh,
         power_observed_at       = power_observed_at,
+        -- Control verification needs distinct source samples. A fresh cloud
+        -- reply alone does not establish a new physical power measurement.
+        control_power_observed_at = timestamps[OBS_TOTAL_POWER],
+        control_power_available = obs[OBS_TOTAL_POWER] ~= nil and timestamps[OBS_TOTAL_POWER] ~= nil,
         power_max_age_s         = 180,
         energy_observed_at      = timestamps[OBS_SESSION_ENERGY],
         state_observed_at       = timestamps[OBS_OP_MODE],

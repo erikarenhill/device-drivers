@@ -24,11 +24,15 @@ end
 
 local first = poll(3, 4.92, "2026-09-25T00:21:20Z")
 assert(first.power_observed_at == "2026-09-25T00:21:20Z", "a new value lost its source time")
+assert(first.control_power_observed_at == "2026-09-25T00:21:20Z" and first.control_power_available,
+    "control evidence lost the measured source time")
 assert(first.device_limit_a == 8 and first.device_limit_age_s == 0, "static ceiling was lost")
 assert(first.max_a == nil, "static ceiling replaced dynamic readback")
 local steady = poll(3, 4.92, "2026-09-25T00:21:20Z")
 assert(steady.power_observed_at == nil,
     "an unchanged value kept its old change time: " .. tostring(steady.power_observed_at))
+assert(steady.control_power_observed_at == first.control_power_observed_at,
+    "cached cloud power became a new control measurement")
 local changed = poll(3, 6.30, "2026-09-25T00:29:20Z")
 assert(changed.power_observed_at == "2026-09-25T00:29:20Z", "a changed value lost its source time")
 

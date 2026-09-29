@@ -1,5 +1,11 @@
 # Changelog
 
+## easee_cloud 1.3.6
+
+Keep the source timestamp for control evidence when the cloud repeats a power
+observation. Missing power or source time cannot confirm a command's effect.
+The existing live-status display and polling rate stay unchanged.
+
 ## pixii 2.1.7
 
 Read the setpoint on every poll, including outside troubleshooting mode. Emit
