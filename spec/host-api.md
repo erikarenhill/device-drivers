@@ -77,18 +77,33 @@ as follows:
 | `inverter` | `inverter` (the AC output; separate from `meter`) |
 | `v2x_charger` | `ev_charger_port` |
 
-When a driver adds a key, take the name from the reference: bare names with
-the unit in the name (`W`, `L1_V`, `total_import_Wh`, `SoC_nom_fract`), no
-`_AC`/`_DC` suffixes, MPPT inputs as `mppt1_V`, `mppt1_A`, `mppt1_W` … up to
-`mppt4_*`, rated power as `rated_power_W`. Leave out a value that was not read
-rather than emitting 0.
+When a driver adds a key, take the name from the reference (data-models
+v3.0.0):
+
+- The unit is in the name, case-exact as the physical symbol (`_W`, `_Wh`,
+  `_V`, `_A`, `_Hz`, `_C`, `_fract`).
+- A quantity that can be AC or DC carries a lowercase `_ac` / `_dc` postfix:
+  `W_ac`, `W_dc`, `V_dc`, `A_dc`, `total_charge_Wh_dc`, `total_import_Wh_ac`,
+  `upper_limit_W_dc`, `rated_power_W_ac`. When the device measures both
+  sides, emit both.
+- A quantity that can only be one side has no postfix: `Hz`, `VA`, `VAR`,
+  per-phase `L1_V` / `L1_A` / `L1_W`, `mppt1_V`, `mppt1_A`, `mppt1_W` … up to
+  `mppt4_*`. EV charger DC values are `W_dc`, `V_dc`, `A_dc` (not `dc_W`).
+- Every DER emits at least one of `W_ac` / `W_dc`.
+- Leave out a value that was not read. Never emit 0 for it.
+- Sign: + import / − export seen from the DER (charge and consume positive;
+  discharge, generation and delivery negative).
+
+NovaCore still accepts the bare names (`W` etc.) for backwards compatibility
+for now.
 
 Key names are a contract, not a convention. Blixt reads each table by exact key
 and silently drops a key whose case is wrong, so a mistyped key loses data
-without an error. Two Blixt L1 emit keys still differ from the data-models
-names: it reads the inverter's rated power as `rated_W` (data-models:
-`rated_power_W`) and PV inputs as `pv.mppts`, a list of `{V, A, W}`
-(data-models: `mpptN_*`). A driver for Blixt keeps those two until the host
+without an error. Blixt L1's own emit keys are host-internal and do not follow
+the data-models names yet: it reads bare names such as `W`, `V`, `A` and
+`total_import_Wh`, the inverter's rated power as `rated_W` (data-models:
+`rated_power_W_ac`), and PV inputs as `pv.mppts`, a list of `{V, A, W}`
+(data-models: `mpptN_*`). A driver for Blixt keeps those keys until the host
 changes.
 
 Emit keys follow the same two dialects: FTW's drivers use `w`, `soc`,
