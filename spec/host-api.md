@@ -58,31 +58,43 @@ Use it for evidence an operator needs when a device misbehaves, not for
 telemetry that belongs in `host.emit()`.
 
 ### `host.emit(der_type, data)`
-Emit telemetry for a DER type: `"pv"`, `"battery"`, `"inverter"`, `"meter"` or
-`"v2x_charger"`.
+Emit telemetry for one DER. `der_type` is the host's DER kind: `"pv"`,
+`"battery"`, `"inverter"`, `"meter"` or `"v2x_charger"`.
+
+**Field names are defined by
+[srcful-data-models](https://github.com/srcfl/srcful-data-models), not here.**
+Every field per DER type, with unit and sign, is in its
+[`docs/REFERENCE.md`](https://github.com/srcfl/srcful-data-models/blob/main/docs/REFERENCE.md).
+DER and device types are owned by the device-support API (`GET /der-types`,
+`GET /device-types`). The host kinds correspond to the device-support DER types
+as follows:
+
+| `der_type` | device-support DER type |
+|---|---|
+| `pv` | `solar` |
+| `battery` | `battery` |
+| `meter` | `meter` |
+| `inverter` | `meter` on the inverter device (there is no inverter DER) |
+| `v2x_charger` | `ev_charger_port` |
+
+When a driver adds a key, take the name from the reference: bare names with
+the unit in the name (`W`, `L1_V`, `total_import_Wh`, `SoC_nom_fract`), no
+`_AC`/`_DC` suffixes, MPPT inputs as `mppt1_V`, `mppt1_A`, `mppt1_W` … up to
+`mppt4_*`, rated power as `rated_power_W`. Leave out a value that was not read
+rather than emitting 0.
 
 Key names are a contract, not a convention. Blixt reads each table by exact key
 and silently drops a key whose case is wrong, so a mistyped key loses data
-without an error. These names match `@srcful/data-models` verbatim:
-
-**Meter:** `W`, `Hz`, `L1_V`/`L1_A`/`L1_W` (… `L2_`, `L3_`), `total_import_Wh`, `total_export_Wh`
-
-**Inverter:** `W`, `VA`, `Hz`, `L1_V`/`L1_A`/`L1_W` (… `L2_`, `L3_`), `rated_W`
-
-**PV:** `W`, `total_generation_Wh`, `mppts`
-
-**Battery:** `W`, `V`, `A`, `SoC_nom_fract` (0-1 fraction), `temperature_C`, `total_charge_Wh`, `total_discharge_Wh`, `available_charge_Wh`, `available_discharge_Wh`
-
-A repeating structure is a plural-named array, never numbered keys. `pv.mppts`
-is a list of `{V, A, W}` as long as the device physically has. The catalog's
-`mppt1_v`/`mppt2_v` cannot describe a four-MPPT inverter at all.
+without an error. Two Blixt L1 emit keys still differ from the data-models
+names: it reads the inverter's rated power as `rated_W` (data-models:
+`rated_power_W`) and PV inputs as `pv.mppts`, a list of `{V, A, W}`
+(data-models: `mpptN_*`). A driver for Blixt keeps those two until the host
+changes.
 
 Emit keys follow the same two dialects: FTW's drivers use `w`, `soc`,
 `import_wh`, Blixt's use `W`, `SoC_nom_fract`, `total_import_Wh`. FTW accepts
 both since v1.11.4-beta.7. Use whichever your target speaks and do not convert
 a working driver to change the spelling of what it already reports correctly.
-
-**V2X Charger:** `w`, `a`, `v`, `hz`, `l1_a`..`l3_a`, `l1_v`..`l3_v`, `l1_w`..`l3_w`, `dc_w`, `dc_a`, `dc_v`, `vehicle_soc_fract`, `ev_max_energy_req_wh`, `ev_min_energy_req_wh`, `session_charge_wh`, `session_discharge_wh`, `total_charge_wh`, `total_discharge_wh`, `capacity_wh`, `rated_power_w`
 
 ## Modbus
 
