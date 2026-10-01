@@ -80,22 +80,25 @@ as follows:
 When a driver adds a key, take the name from the reference (data-models
 v3.0.0):
 
-- The unit is in the name, case-exact as the physical symbol (`_W`, `_Wh`,
-  `_V`, `_A`, `_Hz`, `_C`, `_fract`).
+- Everything that is not a unit is lowercase (`soc_nom_fract`, `soh_fract`,
+  `l1_V`, `total_charge_Wh_dc`); units keep their physical casing (`W`, `Wh`,
+  `V`, `A`, `Hz`, `VA`, `var`, `C`).
 - A quantity that can be AC or DC carries a lowercase `_ac` / `_dc` postfix:
   `W_ac`, `W_dc`, `V_dc`, `A_dc`, `total_charge_Wh_dc`, `total_import_Wh_ac`,
   `upper_limit_W_dc`, `rated_power_W_ac`. When the device measures both
   sides, emit both.
-- A quantity that can only be one side has no postfix: `Hz`, `VA`, `VAR`,
-  per-phase `L1_V` / `L1_A` / `L1_W`, `mppt1_V`, `mppt1_A`, `mppt1_W` … up to
+- A quantity that can only be one side has no postfix: `Hz`, `VA`, `var`,
+  `heatsink_C`, per-phase `l1_V` / `l1_A` / `l1_W`, `mppt1_V`, `mppt1_A`, `mppt1_W` … up to
   `mppt4_*`. EV charger DC values are `W_dc`, `V_dc`, `A_dc` (not `dc_W`).
-- Every DER emits at least one of `W_ac` / `W_dc`.
-- Leave out a value that was not read. Never emit 0 for it.
+- solar, battery, inverter and meter DERs emit at least one of `W_ac` /
+  `W_dc` (optional for ev_charger_port).
+- A value that was not read is not emitted (nil). Never emit 0 for it. On the
+  wire every data-models field is present, and an unread value is `null`.
 - Sign: + import / − export seen from the DER (charge and consume positive;
   discharge, generation and delivery negative).
 
-NovaCore still accepts the bare names (`W` etc.) for backwards compatibility
-for now.
+There are no aliases: consumers move to the 3.0 names. NovaCore ingest still
+accepts the pre-3.0 names (`W`, `SoC_nom_fract` …) for now.
 
 Key names are a contract, not a convention. Blixt reads each table by exact key
 and silently drops a key whose case is wrong, so a mistyped key loses data
