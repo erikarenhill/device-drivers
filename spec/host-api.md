@@ -74,7 +74,7 @@ as follows:
 | `pv` | `solar` |
 | `battery` | `battery` |
 | `meter` | `meter` |
-| `inverter` | `meter` on the inverter device (there is no inverter DER) |
+| `inverter` | `inverter` (the AC output; separate from `meter`) |
 | `v2x_charger` | `ev_charger_port` |
 
 When a driver adds a key, take the name from the reference: bare names with
