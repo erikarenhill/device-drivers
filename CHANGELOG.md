@@ -10,6 +10,35 @@ previously failed at init with `config.host is required`. No runtime change.
 
 Read-only site meter from a Remne P1IB bridge, a Wi-Fi P1/HAN reader common in Sweden. The driver reads the bridge's `/meterData` JSON: net and per-phase active power, voltage, current and lifetime import and export energy, with reactive power and Wi-Fi signal as diagnostic metrics. It uses HTTP rather than the bridge's MQTT output because P1IB publishes MQTT only when a value moves past its hysteresis, so a steady site would look stale to Core and stop dispatch. Freshness comes from the bridge's good-telegram counter: the driver emits once per new telegram, never re-emits the rolling window, and logs once when no telegram has arrived for three telegram intervals. Identity is the bridge MAC, and the model is the meter string it reports. `connection_defaults` declares an empty `host` so FTW setup passes the entered IP as `config.host`. Run in FTW v0.138.2-beta.1 (native, Debian 13) against two P1IB units (hardware rev F, firmware 757b45d) on Landis+Gyr E360 meters, one as site meter: both healthy, readings fresh, and site power within one telegram of the same meter's reading in Home Assistant.
 
+## sungrow 1.5.10
+
+Report the active forced setpoint from the existing holding-register read.
+Identify the separate grid meter on known hybrid models when it reads power
+or phase current; a meterless install claims none. Failed PV, meter or
+setpoint reads cannot supply control evidence. No extra Modbus requests.
+
+## easee_cloud 1.3.6
+
+Keep the source timestamp for control evidence when the cloud repeats a power
+observation, and mark the unchanged value confirmed while the cloud still
+hears from the charger, so a steady charge stays measured. Missing power or
+source time cannot confirm a command's effect. The live-status display and
+polling rate stay unchanged.
+
+## pixii 2.1.7
+
+Read the setpoint on every poll, including outside troubleshooting mode. Emit
+its site-signed value and measured AC power for command feedback; AC power
+leaves SunSpec's generator frame like the setpoint, so a charge is positive.
+Missing reads remain unknown. No change to commands, heartbeat or safety
+policy. Not yet verified on hardware.
+
+## easee_cloud 1.3.5
+
+Report the charger’s configured current ceiling separately from its dynamic
+current offer. Refresh it once a minute and preserve its age when a read
+fails, so Core can explain an 8 A ceiling even while the car charges.
+
 ## pixii 2.1.6
 
 Record the SunSpec status specifications in the manifest so the upstream

@@ -193,15 +193,15 @@ drivers:
     size_bytes: 4054
     sha256: "4a2cd1efb4a5583468ce897ebd88a000e348917295c40210e86ecf834c0ba543"
   - name: "easee_cloud"
-    version: "1.3.4"
+    version: "1.3.6"
     tier: core
     protocol: http
     connectivity: cloud
     setup: [vendor_portal]
     ders: [ev]
     control: true
-    size_bytes: 39308
-    sha256: "46581eb77e9d7e5fc4b0937ea2c5fa560afef749b50a42dd0353682fada87624"
+    size_bytes: 41070
+    sha256: "4f33149c0640c2e9d2c043e36fdf967d8b297f07da56aec934c21e81a397d22b"
   - name: "esphome_dsmr"
     version: "1.0.7"
     tier: core
@@ -498,14 +498,14 @@ drivers:
     size_bytes: 19344
     sha256: "29f2bd2f73c0d39d809839ca60b40c3e4281f1dda267ba2b26e66bd9ab80c27b"
   - name: "pixii"
-    version: "2.1.6"
+    version: "2.1.7"
     tier: core
     protocol: modbus
     connectivity: local
     ders: [battery, meter]
     control: false
-    size_bytes: 28604
-    sha256: "160868e3c7836a87fd33eb26800023ed741c556b376b5e0ab10a4f0097cc3c63"
+    size_bytes: 29105
+    sha256: "bd8fe1e850ce66e83e107116d7e236c499cca51f75872feb03efde58f95d6e41"
   - name: "pixii_pv"
     version: "0.3.2"
     tier: core
@@ -700,14 +700,14 @@ drivers:
     size_bytes: 6631
     sha256: "94ae5e0065f5793051acb89b7ef04a679b2898908dfac6f4ffd6e8deb77fa2c0"
   - name: "sungrow"
-    version: "1.5.9"
+    version: "1.5.10"
     tier: core
     protocol: modbus
     connectivity: local
     ders: [battery, meter, pv]
     control: true
-    size_bytes: 48885
-    sha256: "9847c4281d4387b5d4c6a2e1d91c592ca2cbf32c06b872be2d68d46fe307f823"
+    size_bytes: 49876
+    sha256: "25407256014764245bedf1cfc193f94a696854ddedbd224f66fef827df92fb82"
   - name: "tesla_cloud"
     version: "0.1.0"
     tier: community

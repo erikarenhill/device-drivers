@@ -29,7 +29,7 @@ DRIVER = {
   id           = "pixii",
   name         = "Pixii PowerShaper",
   manufacturer = "Pixii",
-  version      = "2.1.6",
+  version      = "2.1.7",
   protocols    = { "modbus" },
   capabilities = { "battery", "meter" },
   description  = "Pixii PowerShaper commercial battery storage via Modbus TCP.",
@@ -269,9 +269,8 @@ local function read_battery_status()
     }
 end
 
-local function emit_troubleshooting_metrics()
+local function emit_troubleshooting_metrics(setpoint_pixii_w)
     host.emit_metric("pixii_heartbeat_counter", hb_tick)
-    local setpoint_pixii_w = read_i32_be(REG_SETPOINT_HI)
     if setpoint_pixii_w ~= nil then
         host.emit_metric("pixii_setpoint_native_w", setpoint_pixii_w)
         host.emit_metric("pixii_setpoint_ems_w", -setpoint_pixii_w)
@@ -465,12 +464,20 @@ function driver_poll()
     end
 
     local status = read_battery_status()
+    -- Read on every poll: a successful write does not prove the setpoint
+    -- stayed in place. Failure omits the value; it must not invent zero.
+    local setpoint_pixii_w = read_i32_be(REG_SETPOINT_HI)
     if troubleshooting then
-        emit_troubleshooting_metrics()
+        emit_troubleshooting_metrics(setpoint_pixii_w)
     end
 
     local battery = {
         w                    = bat_w,
+        setpoint_w           = setpoint_pixii_w and -setpoint_pixii_w,
+        -- SunSpec W is in the generator frame, like the setpoint: positive
+        -- means power out of the inverter. Site signs charge positive.
+        control_power_w      = acw_regs and -ac_w,
+        control_power_available = acw_regs ~= nil,
         v                    = bat_v,
         a                    = bat_a,
         temp_c               = temp_c,

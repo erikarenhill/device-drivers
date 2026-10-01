@@ -951,3 +951,70 @@ print("RESUMED_WRITES " .. tostring(host._modbus_write_attempts))
         f"the block is there, and a driver that will not hand back a device it "
         f"can hand back is the worse failure. A restart also re-probes, but "
         f"waiting for one is not the answer when the evidence is already in.")
+
+
+@pytest.mark.parametrize("mode,command,expected", [
+    (2, 0xAA, "1500"), (2, 0xBB, "-1500"), (2, 0xCC, "0"),
+    (0, 0xAA, "nil"), (3, 0xAA, "nil"), (2, 0, "nil"),
+])
+def test_sungrow_setpoint_comes_from_active_registers(mode, command, expected):
+    out = run_lua(HEALTHY_HYBRID + f'''
+dofile("{DRIVER}")
+driver_init({{}})
+host._modbus_registers.holding[13049] = {{{mode}, {command}, 1500}}
+driver_poll()
+print("SETPOINT " .. tostring(host._emitted.battery[1].setpoint_w))
+''')
+    assert out["SETPOINT"] == expected
+
+
+def test_sungrow_failed_setpoint_read_does_not_reuse_last_value():
+    out = run_lua(HEALTHY_HYBRID + f'''
+dofile("{DRIVER}")
+driver_init({{}})
+host._modbus_registers.holding[13049] = {{2, 0xBB, 1500}}
+driver_poll()
+host._modbus_read_fail_addresses[13049] = "timeout"
+driver_poll()
+print("BEFORE " .. tostring(host._emitted.battery[1].setpoint_w))
+print("AFTER " .. tostring(host._emitted.battery[2].setpoint_w))
+''')
+    assert out == {"BEFORE": "-1500", "AFTER": "nil"}
+
+
+@pytest.mark.parametrize("fixture,origin", [(HEALTHY_HYBRID, "external_meter"), (STRING_INVERTER, "nil")])
+def test_sungrow_meter_origin_requires_known_hybrid_map(fixture, origin):
+    out = run_lua(fixture + f'''
+dofile("{DRIVER}")
+driver_init({{}})
+driver_poll()
+print("ORIGIN " .. tostring(host._emitted.meter[1].power_origin))
+print("AVAILABLE " .. tostring(host._emitted.meter[1].control_power_available))
+''')
+    assert out == {"ORIGIN": origin, "AVAILABLE": "true"}
+
+
+def test_sungrow_meterless_hybrid_claims_no_separate_meter():
+    out = run_lua(HEALTHY_HYBRID + f'''
+host._modbus_registers.input[5600] = {{0, 0}}
+host._modbus_registers.input[5743] = {{0, 0, 0}}
+dofile("{DRIVER}")
+driver_init({{}})
+driver_poll()
+print("ORIGIN " .. tostring(host._emitted.meter[1].power_origin))
+''')
+    assert out == {"ORIGIN": "nil"}
+
+
+def test_sungrow_failed_flow_reads_cannot_confirm_control():
+    out = run_lua(HEALTHY_HYBRID + f'''
+dofile("{DRIVER}")
+driver_init({{}})
+for _, addr in ipairs({{5600, 5016, 5010}}) do
+    host._modbus_read_fail_addresses[addr] = "timeout"
+end
+driver_poll()
+print("METER " .. tostring(host._emitted.meter[1].control_power_available))
+print("PV " .. tostring(host._emitted.pv[1].control_power_available))
+''')
+    assert out == {"METER": "false", "PV": "false"}
