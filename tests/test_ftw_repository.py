@@ -1025,8 +1025,43 @@ def test_signing_in_is_declared_or_it_does_not_happen(
         else:
             assert "auth_post_path" not in driver["metadata"], driver["id"]
             assert "http.post" not in driver["permissions"], driver["id"]
-    assert exempt == ["myuplink", "tesla_cloud"], (
+    assert exempt == ["myuplink", "tesla_cloud", "vag_vehicle"], (
         f"unexpected drivers allowed to POST: {exempt}")
+
+
+def test_multi_step_sign_in_declares_every_path(
+    tmp_path: Path, keypair: tuple[str, str]
+) -> None:
+    """A web login posts two forms; both paths are declared, nothing else."""
+    manifest, output = build(tmp_path, keypair)
+    driver = next(d for d in manifest["drivers"] if d["id"] == "vag_vehicle")
+    artifact = (output / Path(driver["url"]).name).read_text()
+    # The first path also sits in auth_post_path, which an older Core needs
+    # before it runs a read-only driver holding http.post.
+    paths = [driver["metadata"]["auth_post_path"], *driver["metadata"]["auth_post_paths"]]
+    assert len(paths) == 8 and all(p.startswith("/signin-service/v1/") for p in paths)
+    assert {p.rsplit("/", 1)[1] for p in paths} == {"identifier", "authenticate"}
+    assert "http.post" in driver["permissions"]
+    for path in paths:
+        assert f'"{path}"' in artifact
+    # host.http_request is guarded the same way: GET passes, POST only to a
+    # declared path.
+    assert "host.http_request = function(opts)" in artifact
+    assert 'method == "POST" and __sourceful_ftw_is_auth(opts.url)' in artifact
+
+
+def test_http_request_guard_only_where_used(
+    tmp_path: Path, keypair: tuple[str, str]
+) -> None:
+    """Only a driver that calls host.http_request gets its guard, so adding
+    the guard did not change any other published artifact."""
+    manifest, output = build(tmp_path, keypair)
+    guarded = []
+    for driver in manifest["drivers"]:
+        artifact = (output / Path(driver["url"]).name).read_text()
+        if "host.http_request = function(opts)" in artifact:
+            guarded.append(driver["id"])
+    assert guarded == ["vag_vehicle"], guarded
 
 
 def test_auth_post_path_must_be_a_path_and_must_mean_something(
