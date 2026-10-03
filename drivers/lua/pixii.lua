@@ -29,7 +29,7 @@ DRIVER = {
   id           = "pixii",
   name         = "Pixii PowerShaper",
   manufacturer = "Pixii",
-  version      = "2.1.7",
+  version      = "2.1.8",
   protocols    = { "modbus" },
   capabilities = { "battery", "meter" },
   description  = "Pixii PowerShaper commercial battery storage via Modbus TCP.",
@@ -474,9 +474,9 @@ function driver_poll()
     local battery = {
         w                    = bat_w,
         setpoint_w           = setpoint_pixii_w and -setpoint_pixii_w,
-        -- SunSpec W is in the generator frame, like the setpoint: positive
-        -- means power out of the inverter. Site signs charge positive.
-        control_power_w      = acw_regs and -ac_w,
+        -- The measured AC register already uses site signs on Pixii hardware:
+        -- charge positive, discharge negative. Do not invert it like the setpoint.
+        control_power_w      = acw_regs and ac_w,
         control_power_available = acw_regs ~= nil,
         v                    = bat_v,
         a                    = bat_a,

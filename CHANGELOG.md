@@ -25,6 +25,14 @@ hears from the charger, so a steady charge stays measured. Missing power or
 source time cannot confirm a command's effect. The live-status display and
 polling rate stay unchanged.
 
+## pixii 2.1.8
+
+Preserve the sign of measured AC power from Pixii register 40083 for command
+feedback. Hardware reports this value in FTW site signs already: charging is
+positive and discharging is negative. Setpoint conversion, commands, heartbeat
+and safety policy are unchanged. Verified against PowerShaper site telemetry
+reported in #154; regression tests cover both charge and discharge signs.
+
 ## pixii 2.1.7
 
 Read the setpoint on every poll, including outside troubleshooting mode. Emit
