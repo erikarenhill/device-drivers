@@ -53,6 +53,20 @@ assert(posts("resume_charging") == 0, "resumed while the poll still showed charg
 
 advance(1000)
 poll(2, 0)
+advance(1000)
+poll(0, 0)
+offer(9000)
+assert(posts("resume_charging") == 0, "offline poll left an old stop observation valid")
+
+advance(1000)
+poll(2, 0)
+host._http_responses["/observations?ids="] = "not JSON"
+driver_poll()
+offer(9000)
+assert(posts("resume_charging") == 0, "failed poll left an old stop observation valid")
+
+advance(1000)
+poll(2, 0)
 offer(9000)
 assert(posts("resume_charging") == 1, "did not resume once a poll showed charging had stopped")
 advance(5000)

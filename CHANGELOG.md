@@ -9,7 +9,8 @@ on the old phase count. On an Easee Home with a Tesla, `phaseMode=3` was
 written mid-session and the car drew 15 A on one phase for hours until the
 owner paused and resumed in the Easee app. A later `ev_set_current` resumes
 once a poll has seen the charger leave charging. An explicit `ev_pause` or
-`ev_resume` clears the wait. Not yet verified on hardware.
+`ev_resume` clears the wait. A failed poll clears the stop observation, so
+auto-resume waits for a valid poll again. Not yet verified on hardware.
 
 ## heishamon 0.8.0
 

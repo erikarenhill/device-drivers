@@ -594,6 +594,10 @@ function driver_init(config)
 end
 
 function driver_poll()
+    -- A failed poll leaves the charger state unknown. A prior stop
+    -- observation must not allow a phase-flip resume through that gap.
+    last_poll_ms = nil
+    last_poll_charging = nil
     if not charger_serial or not email then
         return 10000
     end
