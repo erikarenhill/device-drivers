@@ -1806,7 +1806,7 @@ manufacturers:
         protocols:
           - protocol: http
             driver: "tesla_vehicle"
-            version: "0.2.3"
+            version: "0.2.4"
             ders: [vehicle]
             control: true
         firmware_versions: ""
@@ -1817,7 +1817,7 @@ manufacturers:
         protocols:
           - protocol: http
             driver: "tesla_cloud"
-            version: "0.1.0"
+            version: "0.1.1"
             ders: [vehicle]
             control: false
         firmware_versions: ""
@@ -1828,7 +1828,7 @@ manufacturers:
         protocols:
           - protocol: mqtt
             driver: "teslamate_vehicle"
-            version: "0.1.0"
+            version: "0.1.1"
             ders: [vehicle]
             control: false
         firmware_versions: ""
@@ -2064,7 +2064,7 @@ manufacturers:
         protocols:
           - protocol: http
             driver: "vag_vehicle"
-            version: "0.2.0"
+            version: "0.2.1"
             ders: [vehicle]
             control: false
         firmware_versions: ""

@@ -58,7 +58,7 @@ DRIVER = {
   id           = "tesla_cloud",
   name         = "Tesla Vehicle (Fleet API)",
   manufacturer = "Tesla",
-  version      = "0.1.0",
+  version      = "0.1.1",
   protocols    = { "http" },
   capabilities = { "vehicle" },
   read_only    = true,
@@ -122,6 +122,17 @@ local next_request_ms = 0
 -- Whether the car was online at the previous state check (nil: not
 -- checked yet since start).
 local was_online    = nil
+
+-- Logs get pasted into public issues, and a VIN identifies the owner's
+-- car. Every log line therefore shows only the VIN's last four characters.
+local function log(level, message)
+  message = tostring(message)
+  if type(vin) == "string" and #vin > 4 then
+    local escaped = vin:gsub("%p", "%%%0")
+    message = message:gsub(escaped, "****" .. vin:sub(-4))
+  end
+  host.log(level, message)
+end
 
 -- Last vendor observation. seen_ms is host.millis() of the last successful
 -- charge_state read. Age is measured on that clock; Tesla's unix ms cannot
@@ -200,17 +211,17 @@ local function persist_refresh(new_token)
   if not host.persist_secret then return end
   local ok, perr = host.persist_secret("refresh_token", refresh_token)
   if not ok then
-    host.log("warn", "tesla_cloud: could not persist rotated refresh_token: " .. tostring(perr))
+    log("warn", "tesla_cloud: could not persist rotated refresh_token: " .. tostring(perr))
   end
 end
 
 local function fetch_token()
   if not refresh_token or refresh_token == "" then
-    host.log("warn", "tesla_cloud: not connected — set refresh_token from a Tesla Fleet API auth-code exchange")
+    log("warn", "tesla_cloud: not connected — set refresh_token from a Tesla Fleet API auth-code exchange")
     return false
   end
   if not client_id or client_id == "" then
-    host.log("error", "tesla_cloud: client_id required")
+    log("error", "tesla_cloud: client_id required")
     return false
   end
   local body = "grant_type=refresh_token"
@@ -224,12 +235,12 @@ local function fetch_token()
     Accept = "application/json",
   })
   if err then
-    host.log("error", "tesla_cloud: token refresh failed: " .. redact_http_err(err))
+    log("error", "tesla_cloud: token refresh failed: " .. redact_http_err(err))
     return false
   end
   local data, derr = decode_json(resp)
   if derr or type(data) ~= "table" or not data.access_token then
-    host.log("error", "tesla_cloud: no access_token in refresh response")
+    log("error", "tesla_cloud: no access_token in refresh response")
     return false
   end
   access_token = data.access_token
@@ -401,7 +412,7 @@ function driver_init(config)
   local region = tostring(config.region or "eu"):lower()
   base_url = REGION_URL[region]
   if not base_url then
-    host.log("warn", "tesla_cloud: unknown region " .. region .. ", using eu")
+    log("warn", "tesla_cloud: unknown region " .. region .. ", using eu")
     region = "eu"
     base_url = REGION_URL.eu
   end
@@ -412,9 +423,9 @@ function driver_init(config)
   -- First poll soon; driver_poll sets POLL_MS on every path after that.
   host.set_poll_interval(500)
   if not client_id or client_id == "" or not refresh_token or refresh_token == "" then
-    host.log("error", "tesla_cloud: client_id and refresh_token required (Fleet API auth-code exchange)")
+    log("error", "tesla_cloud: client_id and refresh_token required (Fleet API auth-code exchange)")
   end
-  host.log("info", "tesla_cloud: init region=" .. region ..
+  log("info", "tesla_cloud: init region=" .. region ..
                    " vin=" .. tostring(vin or "(discover)") ..
                    " telemetry-only")
 end
@@ -443,7 +454,7 @@ function driver_poll()
     end
   end
   if err or type(row) ~= "table" then
-    host.log("warn", "tesla_cloud: vehicle status: " .. redact_http_err(err))
+    log("warn", "tesla_cloud: vehicle status: " .. redact_http_err(err))
     wait(ERROR_RETRY_MS)
     emit_vehicle(false)
     return POLL_MS
@@ -451,7 +462,7 @@ function driver_poll()
 
   bind_identity(row.vin)
   if not vin or vin == "" then
-    host.log("warn", "tesla_cloud: no VIN on account")
+    log("warn", "tesla_cloud: no VIN on account")
     wait(ERROR_RETRY_MS)
     return POLL_MS
   end
@@ -461,7 +472,7 @@ function driver_poll()
   local woke_just_now = online and was_online == false
   was_online = online
   if not online then
-    host.log("debug", "tesla_cloud: " .. vin .. " is " .. (state ~= "" and state or "unknown") ..
+    log("debug", "tesla_cloud: " .. vin .. " is " .. (state ~= "" and state or "unknown") ..
                       " — not calling vehicle_data")
     wait(ASLEEP_EVERY_MS)
     emit_vehicle(false)
@@ -470,7 +481,7 @@ function driver_poll()
   if woke_just_now then
     -- The car wakes briefly on its own. A live call now would keep it
     -- awake; if it is still online at the next check, it is in use.
-    host.log("debug", "tesla_cloud: " .. vin .. " just woke — reading at the next check")
+    log("debug", "tesla_cloud: " .. vin .. " just woke — reading at the next check")
     wait(ASLEEP_EVERY_MS)
     emit_vehicle(false)
     return POLL_MS
@@ -486,20 +497,20 @@ function driver_poll()
   if ferr then
     local es = tostring(ferr)
     if es:match("HTTP 408") or es:match("vehicle unavailable") then
-      host.log("debug", "tesla_cloud: vehicle_data unavailable (asleep)")
+      log("debug", "tesla_cloud: vehicle_data unavailable (asleep)")
       wait(ASLEEP_EVERY_MS)
     elseif es:match("HTTP 429") then
-      host.log("warn", "tesla_cloud: rate limited")
+      log("warn", "tesla_cloud: rate limited")
       wait(BACKOFF_MS)
     else
-      host.log("warn", "tesla_cloud: vehicle_data: " .. redact_http_err(ferr))
+      log("warn", "tesla_cloud: vehicle_data: " .. redact_http_err(ferr))
       wait(ERROR_RETRY_MS)
     end
     emit_vehicle(false)
     return POLL_MS
   end
   if type(cs) ~= "table" or not remember(cs) then
-    host.log("debug", "tesla_cloud: no battery_level in charge_state")
+    log("debug", "tesla_cloud: no battery_level in charge_state")
     wait(IDLE_EVERY_MS)
     emit_vehicle(false)
     return POLL_MS
@@ -510,7 +521,7 @@ function driver_poll()
   else
     wait(IDLE_EVERY_MS)
   end
-  host.log("info", "tesla_cloud: emit soc=" .. tostring(last.soc) ..
+  log("info", "tesla_cloud: emit soc=" .. tostring(last.soc) ..
                    " limit=" .. tostring(last.charge_limit) ..
                    " state=" .. tostring(last.charging_state))
   emit_vehicle(true)

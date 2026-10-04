@@ -1,5 +1,21 @@
 # Changelog
 
+## vag_vehicle 0.2.1
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
+## tesla_vehicle 0.2.4
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
+## tesla_cloud 0.1.1
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
+## teslamate_vehicle 0.1.1
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
 ## myuplink 1.2.3
 
 Record NIBE F750 as hardware-tested with the existing read-only MyUplink Cloud REST API v2 driver. OAuth connection and live telemetry were verified on an F750 in FTW; observed points included BT1 average outdoor temperature, BT12 condenser temperature and more than 100 additional heat-pump telemetry points. No control or write path is added.

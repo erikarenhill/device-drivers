@@ -59,7 +59,7 @@ DRIVER = {
   id           = "teslamate_vehicle",
   name         = "Tesla Vehicle (TeslaMate)",
   manufacturer = "Tesla",
-  version      = "0.1.0",
+  version      = "0.1.1",
   protocols    = { "mqtt" },
   capabilities = { "vehicle" },
   read_only    = true,
@@ -90,6 +90,17 @@ local AWAKE = {
 }
 
 local vin = nil
+
+-- Logs get pasted into public issues, and a VIN identifies the owner's
+-- car. Every log line therefore shows only the VIN's last four characters.
+local function log(level, message)
+  message = tostring(message)
+  if type(vin) == "string" and #vin > 4 then
+    local escaped = vin:gsub("%p", "%%%0")
+    message = message:gsub(escaped, "****" .. vin:sub(-4))
+  end
+  host.log(level, message)
+end
 
 -- Last live (awake) observation. seen_ms is host.millis() when TeslaMate
 -- last published charge fields while the car was awake. TeslaMate's
@@ -326,7 +337,7 @@ function driver_init(config)
     vin = tostring(config.vin)
     host.set_sn(vin)
   else
-    host.log("error", "teslamate_vehicle: config.vin required (TeslaMate MQTT does not publish VIN)")
+    log("error", "teslamate_vehicle: config.vin required (TeslaMate MQTT does not publish VIN)")
   end
 
   if config.topic_prefix and tostring(config.topic_prefix) ~= "" then
@@ -349,9 +360,9 @@ function driver_init(config)
   -- Real host returns nil on success. The test mock returns true.
   local err = host.mqtt_subscribe(base_topic .. "/#")
   if type(err) == "string" and err ~= "" then
-    host.log("error", "teslamate_vehicle: subscribe failed: " .. err)
+    log("error", "teslamate_vehicle: subscribe failed: " .. err)
   else
-    host.log("info", "teslamate_vehicle: subscribed to " .. base_topic .. "/#" ..
+    log("info", "teslamate_vehicle: subscribed to " .. base_topic .. "/#" ..
                      " vin=" .. tostring(vin or "(missing)") ..
                      " telemetry-only")
   end
@@ -375,7 +386,7 @@ function driver_poll()
   -- the car is awake starts (or refreshes) the age clock. Idle polls and
   -- asleep retained values must not look like a new BMS reading.
   if can_accept_fresh() and saw_charge and remember() then
-    host.log("info", "teslamate_vehicle: emit soc=" .. tostring(last.soc) ..
+    log("info", "teslamate_vehicle: emit soc=" .. tostring(last.soc) ..
                      " limit=" .. tostring(last.charge_limit) ..
                      " state=" .. tostring(last.charging_state) ..
                      " tm=" .. tostring(last.tm_state))
