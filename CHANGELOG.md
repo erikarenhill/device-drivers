@@ -1,5 +1,16 @@
 # Changelog
 
+## easee_cloud 1.3.7
+
+Wait 15 s after the pause before resuming a mid-session 1Φ↔3Φ flip. Easee
+applies a new `phaseMode` only when the session restarts, and the cloud queues
+commands, so the resume sent ~0.3 s after the pause in the same command
+reached the charger before the contactor opened. On an Easee Home with a
+Tesla, `phaseMode=3` was written mid-session and the car drew 15 A on one
+phase for hours until the owner paused and resumed in the Easee app. The
+following `ev_set_current` ticks now resume once the delay has passed; an
+explicit `ev_pause` or `ev_resume` clears it. Not yet verified on hardware.
+
 ## heishamon 0.8.0
 
 Read `hp_power_w` from `main/Heat_Power_Consumption` (TOP16), with a
