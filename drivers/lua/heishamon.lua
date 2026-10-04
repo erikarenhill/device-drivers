@@ -24,6 +24,14 @@
 --         min_offset: -3
 --         max_offset: 3
 --         safe_offset: 0
+--         power_topic: Heat_Power_Consumption
+--
+-- power_topic names a main/ topic carrying electrical power in W.
+-- The default is Heat_Power_Consumption (TOP16), the heat-mode input.
+-- It is not total input in cooling or DHW mode. Pumps with an extra data
+-- block can send invalid negative values on this legacy topic; omit them.
+-- This new reading has not been checked on hardware.
+-- Source: https://github.com/heishamon/HeishaMon/blob/main/MQTT-Topics.md
 
 DRIVER = {
   host_api_min = 1,
@@ -31,7 +39,7 @@ DRIVER = {
   id           = "heishamon",
   name         = "Panasonic Aquarea (Heishamon)",
   manufacturer = "Panasonic",
-  version      = "0.7.0",
+  version      = "0.8.0",
   protocols    = { "mqtt" },
   capabilities = { "heatpump" },
   description  = "Panasonic Aquarea H/J/K/L/M-series heat pump via Heishamon MQTT bridge. Controls Zone 1 heat curve offset (Z1_Heat_Request_Temp) in range -3..+3 °C.",
@@ -41,7 +49,7 @@ DRIVER = {
   verification_status = "experimental",
   verified_by = { "Rolf (Runneval)" },
   verified_at = "2026-06-21",
-  verification_notes = "Tested on WH-SXC09H3E8 (H-series) with Heishamon Large v4.1.6 on ESP32. MQTT via core-mosquitto on HA Green. Live metrics confirmed. Offset control verified via Z1_Heat_Request_Temp.",
+  verification_notes = "Existing metrics and offset control tested on WH-SXC09H3E8 (H-series) with Heishamon Large v4.1.6 on ESP32 on 2026-06-21. The new hp_power_w reading is not hardware-verified; its default topic reports heat-mode input, not total input in cooling or DHW mode.",
   -- What an operator may command, in terms a host UI can render without
   -- knowing this driver. The bounds are the defaults below; min_offset and
   -- max_offset can narrow them in config, and driver_command clamps to
@@ -71,7 +79,9 @@ local outlet_temp    = nil
 local inlet_temp     = nil
 local target_temp    = nil
 local z1_offset      = nil
+local power_w        = nil
 local last_msg_ts    = 0
+local last_power_ts  = 0
 local STALE_AFTER_MS = 60000
 
 -- Config (overridable via config.yaml)
@@ -79,6 +89,7 @@ local base_topic   = "panasonic_heat_pump"
 local min_offset   = -3
 local max_offset   = 3
 local safe_offset  = 0
+local power_topic  = "Heat_Power_Consumption"
 
 ----------------------------------------------------------------------------
 -- Lifecycle
@@ -92,6 +103,7 @@ function driver_init(config)
         if config.min_offset  then min_offset  = tonumber(config.min_offset)  or -3   end
         if config.max_offset  then max_offset  = tonumber(config.max_offset)  or  3   end
         if config.safe_offset then safe_offset = tonumber(config.safe_offset) or  0   end
+        if config.power_topic then power_topic = config.power_topic                   end
     end
 
     -- Subscribe broadly to all Heishamon topics
@@ -104,7 +116,8 @@ function driver_init(config)
 
     host.log("info", "Heishamon: initialized, base_topic=" .. base_topic
         .. " offset_range=[" .. min_offset .. ".." .. max_offset .. "]"
-        .. " safe_offset=" .. safe_offset)
+        .. " safe_offset=" .. safe_offset
+        .. " power_topic=" .. power_topic)
 end
 
 function driver_poll()
@@ -114,7 +127,18 @@ function driver_poll()
 
     for _, msg in ipairs(messages) do
         local val = tonumber(msg.payload)
-        if val ~= nil then
+        if msg.topic == base_topic .. "/main/" .. power_topic then
+            -- Heat consumption cannot be negative. Some newer pumps use
+            -- -200 as an invalid value on the legacy power topic.
+            if val ~= nil and val == val and val >= 0 and val < math.huge then
+                power_w       = val
+                last_power_ts = now
+                last_msg_ts   = now
+            else
+                power_w       = nil
+                last_power_ts = 0
+            end
+        elseif val ~= nil then
             if msg.topic == base_topic .. "/main/Outside_Temp" then
                 outside_temp = val
                 last_msg_ts  = now
@@ -143,14 +167,24 @@ function driver_poll()
         inlet_temp   = nil
         target_temp  = nil
         z1_offset    = nil
+        power_w      = nil
+        last_power_ts = 0
+    elseif last_power_ts > 0 and (now - last_power_ts) > STALE_AFTER_MS then
+        host.log("warn", "Heishamon: no power reading for "
+            .. tostring(STALE_AFTER_MS) .. " ms — power stale")
+        power_w       = nil
+        last_power_ts = 0
     end
 
-    -- Emit metrics
-    if outside_temp ~= nil then host.emit_metric("hp_outside_temp_c", outside_temp, "°C") end
+    -- Emit metrics. Names are the ones FTW's heating view reads: it finds a
+    -- heat pump by hp_power_w and charts the outdoor temperature under
+    -- hp_outdoor_temp_c, the same names nibe_local and myuplink report.
+    if outside_temp ~= nil then host.emit_metric("hp_outdoor_temp_c", outside_temp, "°C") end
     if outlet_temp  ~= nil then host.emit_metric("hp_outlet_temp_c",  outlet_temp,  "°C") end
     if inlet_temp   ~= nil then host.emit_metric("hp_inlet_temp_c",   inlet_temp,   "°C") end
     if target_temp  ~= nil then host.emit_metric("hp_target_temp_c",  target_temp,  "°C") end
     if z1_offset    ~= nil then host.emit_metric("hp_z1_heat_offset", z1_offset,    "°C") end
+    if power_w      ~= nil then host.emit_metric("hp_power_w",        power_w,      "W")  end
 
     return 5000
 end
@@ -205,4 +239,6 @@ function driver_cleanup()
     inlet_temp   = nil
     target_temp  = nil
     z1_offset    = nil
+    power_w      = nil
+    last_power_ts = 0
 end

@@ -1,5 +1,17 @@
 # Changelog
 
+## heishamon 0.8.0
+
+Read `hp_power_w` from `main/Heat_Power_Consumption` (TOP16), with a
+`power_topic` override. This is the heat-mode input, not total electrical
+input in cooling or DHW mode. The new reading remains unverified on
+hardware. Invalid negative or non-finite power values clear the reading;
+newer pumps can send −200 on this legacy topic. Power expires after
+60 seconds without its own update, even if other topics keep arriving.
+
+Use `hp_outdoor_temp_c` for outdoor temperature, matching the other
+heat-pump drivers and FTW's Heating view. Prior history keeps its old key.
+
 ## heishamon 0.7.0
 
 Declare the existing `set_heat_curve_offset` control: −3…+3 °C, in steps
@@ -315,7 +327,6 @@ Driver versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   comments. No behaviour change.
 
 ### Added
-
 - **acuvim** 0.4.1 — Accuenergy Acuvim II three-phase revenue-grade meter,
   migrated from the Blixt L1 driver source (POI meter on Blixt
   SvK sites). One bundled FC03 float32 block + a bounded probe of the
