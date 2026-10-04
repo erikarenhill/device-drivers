@@ -1,6 +1,13 @@
 dofile("drivers/tests/lua_harness/host_mock.lua")
 
 local VIN = "5YJ3E1EA1KF000000"
+
+-- Logs get pasted into public issues, so no log line may carry the full VIN.
+local mock_log = host.log
+function host.log(level, message)
+  assert(not tostring(message):find(VIN, 1, true), "log shows the full VIN: " .. tostring(message))
+  return mock_log(level, message)
+end
 local AUTH = "https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token"
 local EU = "https://fleet-api.prd.eu.vn.cloud.tesla.com"
 local STATUS = EU .. "/api/1/vehicles/" .. VIN

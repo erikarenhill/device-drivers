@@ -29,7 +29,7 @@ DRIVER = {
   id           = "tesla_vehicle",
   name         = "Tesla Vehicle (BLE Proxy)",
   manufacturer = "Tesla",
-  version      = "0.2.3",
+  version      = "0.2.4",
   protocols    = { "http" },
   capabilities = { "vehicle" },
   description  = "Read-only vehicle SoC + charge limit via Tesla API-compatible HTTP endpoint (e.g. TeslaBLEProxy).",
@@ -105,6 +105,17 @@ local last_wakeup_ms = 0
 local last_wake_attempt_ms = 0   -- includes both periodic + retry wakes
 local pending_wake_retry = false -- set by failed poll, consumed by next poll
 
+-- Logs get pasted into public issues, and a VIN identifies the owner's
+-- car. Every log line therefore shows only the VIN's last four characters.
+local function log(level, message)
+  message = tostring(message)
+  if type(vin) == "string" and #vin > 4 then
+    local escaped = vin:gsub("%p", "%%%0")
+    message = message:gsub(escaped, "****" .. vin:sub(-4))
+  end
+  host.log(level, message)
+end
+
 -- Cached last-known reading so we can keep publishing a value while
 -- the vehicle is asleep. Tesla returns 408 "vehicle unavailable" when
 -- the car is in deep sleep; we treat that as "use last-known" until
@@ -152,18 +163,18 @@ end
 
 function driver_init(config)
   if not config then
-    host.log("error", "tesla: config required (ip + vin)")
+    log("error", "tesla: config required (ip + vin)")
     return
   end
   local ip = config.ip
   vin = config.vin
 
   if not ip or ip == "" then
-    host.log("error", "tesla: `ip` required (LAN address of TeslaBLEProxy)")
+    log("error", "tesla: `ip` required (LAN address of TeslaBLEProxy)")
     return
   end
   if not vin or vin == "" then
-    host.log("error", "tesla: `vin` required (vehicle VIN the proxy is paired to)")
+    log("error", "tesla: `vin` required (vehicle VIN the proxy is paired to)")
     return
   end
 
@@ -196,7 +207,7 @@ function driver_init(config)
   -- The registry re-reads PollInterval() on every iteration, so the
   -- mid-flight change takes effect immediately.
   host.set_poll_interval(500)
-  host.log("info", "tesla: driver initialized vin=" .. tostring(vin) ..
+  log("info", "tesla: driver initialized vin=" .. tostring(vin) ..
                    " proxy=" .. base_url ..
                    " poll_s=" .. tostring(POLL_INTERVAL_MS / 1000) ..
                    " (first poll within 1s)")
@@ -279,7 +290,7 @@ function driver_poll()
     -- Previous poll failed; we armed a retry. Consume it.
     do_wakeup = true
     pending_wake_retry = false
-    host.log("info", "tesla: wake-retry firing after previous poll failure")
+    log("info", "tesla: wake-retry firing after previous poll failure")
   elseif (last_wakeup_ms > 0) and ((now - last_wakeup_ms) >= wake_cadence_ms) then
     do_wakeup = true
   elseif last.charging_state == "Charging" and last.ts_ms > 0 and
@@ -292,7 +303,7 @@ function driver_poll()
     -- stale "Charging" reading. Gated to Charging only so a parked
     -- car doesn't get its 12 V drained by speculative wakes.
     do_wakeup = true
-    host.log("info", "tesla: stale-while-charging force-wake (" ..
+    log("info", "tesla: stale-while-charging force-wake (" ..
                      tostring(math.floor((now - last.ts_ms) / 1000)) ..
                      "s since last emit)")
   end
@@ -307,7 +318,7 @@ function driver_poll()
     url = url .. "&wakeup=true"
     last_wakeup_ms = now
     last_wake_attempt_ms = now
-    host.log("info", "tesla: forcing BLE wakeup on this poll" ..
+    log("info", "tesla: forcing BLE wakeup on this poll" ..
                      " (cadence=" .. tostring(wake_cadence_ms / 60000) .. "min" ..
                      " charging=" .. tostring(last.charging_state == "Charging") .. ")")
   end
@@ -329,7 +340,7 @@ function driver_poll()
     -- already busy; adding another wake won't help.
     local es = tostring(err)
     if es:match("HTTP 503") or es:match("HTTP 408") or es:match("Command Disallowed") then
-      host.log("debug", "tesla: proxy busy (BLE busy) — backing off 3 min")
+      log("debug", "tesla: proxy busy (BLE busy) — backing off 3 min")
       emit_last()
       return 180000  -- 3 min
     end
@@ -342,24 +353,24 @@ function driver_poll()
     -- already woke (no point retrying with another wake — that's
     -- the case the proxy is genuinely failing) — fall back to the
     -- normal interval and let the periodic cadence catch up.
-    host.log("warn", "tesla: poll HTTP error: " .. es)
+    log("warn", "tesla: poll HTTP error: " .. es)
     emit_last()
     if not do_wakeup then
       pending_wake_retry = true
-      host.log("info", "tesla: wake-retry armed (next poll will force BLE wake)")
+      log("info", "tesla: wake-retry armed (next poll will force BLE wake)")
       return FAILURE_RETRY_INTERVAL_MS
     end
     return steady_ms
   end
   if not body or body == "" then
-    host.log("warn", "tesla: empty body from proxy")
+    log("warn", "tesla: empty body from proxy")
     emit_last()
     return steady_ms
   end
 
   local decoded, derr = safe_json_decode(body)
   if derr or not decoded then
-    host.log("warn", "tesla: json decode failed: " .. tostring(derr))
+    log("warn", "tesla: json decode failed: " .. tostring(derr))
     emit_last()
     return steady_ms
   end
@@ -385,7 +396,7 @@ function driver_poll()
     end
   end
   if not charge_state then
-    host.log("debug", "tesla: no charge_state in response")
+    log("debug", "tesla: no charge_state in response")
     emit_last()
     return steady_ms
   end
@@ -418,7 +429,7 @@ function driver_poll()
     last.charger_actual_current = charger_actual_current
     last.ts_ms                  = host.millis()
 
-    host.log("info", "tesla: emit soc=" .. tostring(soc) ..
+    log("info", "tesla: emit soc=" .. tostring(soc) ..
                      " limit=" .. tostring(limit) ..
                      " state=" .. tostring(cs) ..
                      " amps=" .. tostring(charge_amps) ..
@@ -433,7 +444,7 @@ function driver_poll()
       stale                   = false,
     })
     if emit_err then
-      host.log("warn", "tesla: emit returned error: " .. tostring(emit_err))
+      log("warn", "tesla: emit returned error: " .. tostring(emit_err))
     end
   else
     -- Malformed response (no battery_level) → keep last-known.
@@ -461,7 +472,7 @@ function driver_command(action, _, _)
   -- caller's wake just supersedes it.
   if action == "wake_up" or action == "ev_wake" then
     if not base_url or not vin then
-      host.log("warn", "tesla: wake_up before init")
+      log("warn", "tesla: wake_up before init")
       return false
     end
     local url = base_url .. "/api/1/vehicles/" .. vin .. "/command/wake_up"
@@ -469,17 +480,17 @@ function driver_command(action, _, _)
     if err then
       local es = tostring(err)
       if es:match("HTTP 503") or es:match("HTTP 408") then
-        host.log("debug", "tesla: wake_up busy, will retry on next caller: " .. es)
+        log("debug", "tesla: wake_up busy, will retry on next caller: " .. es)
         return false
       end
-      host.log("warn", "tesla: wake_up failed: " .. es)
+      log("warn", "tesla: wake_up failed: " .. es)
       return false
     end
     last_wakeup_ms = host.millis()
     last_wake_attempt_ms = last_wakeup_ms
     pending_wake_retry = false
     local snippet = (body and #body > 0) and body:sub(1, 200) or "(empty body)"
-    host.log("info", "tesla: wake_up sent: " .. snippet)
+    log("info", "tesla: wake_up sent: " .. snippet)
     return true
   end
   -- Wake-and-start support. The loadpoint controller fires the
@@ -492,7 +503,7 @@ function driver_command(action, _, _)
   -- — the Go side has no Tesla-specific knowledge.
   if action == "charge_start" or action == "ev_start" then
     if not base_url or not vin then
-      host.log("warn", "tesla: charge_start before init")
+      log("warn", "tesla: charge_start before init")
       return false
     end
     local url = base_url .. "/api/1/vehicles/" .. vin .. "/command/charge_start"
@@ -506,10 +517,10 @@ function driver_command(action, _, _)
       -- busy or rate-limited. Not an error from our perspective —
       -- the controller's cooldown will retry on the next window.
       if es:match("HTTP 503") or es:match("HTTP 408") then
-        host.log("debug", "tesla: charge_start busy/asleep, will retry: " .. es)
+        log("debug", "tesla: charge_start busy/asleep, will retry: " .. es)
         return false
       end
-      host.log("warn", "tesla: charge_start failed: " .. es)
+      log("warn", "tesla: charge_start failed: " .. es)
       return false
     end
     -- Surface the proxy's response body so we can see WHY a
@@ -518,10 +529,10 @@ function driver_command(action, _, _)
     -- (idempotent / no-op), or a vehicle-side rejection (e.g. user
     -- has charge-on-schedule enabled).
     local snippet = (body and #body > 0) and body:sub(1, 200) or "(empty body)"
-    host.log("info", "tesla: charge_start response: " .. snippet)
+    log("info", "tesla: charge_start response: " .. snippet)
     return true
   end
-  host.log("debug", "tesla: command ignored: " .. tostring(action))
+  log("debug", "tesla: command ignored: " .. tostring(action))
   return false
 end
 

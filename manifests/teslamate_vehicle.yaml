@@ -1,5 +1,5 @@
 name: "teslamate_vehicle"
-version: "0.1.0"
+version: "0.1.1"
 tier: community
 author: "Sourceful Labs AB"
 protocol: mqtt
@@ -21,9 +21,9 @@ upstream_docs:
     kind: api_docs
     url_stability: stable
 min_host_version: "2.0.0"
-size_bytes: 13260
+size_bytes: 13638
 dkb_id: "teslamate_vehicle"
-sha256: "916cc84bd8df4080ccccbcc9bc968082771e847a6c1f020cfeefc52d4db68a43"
+sha256: "2a6014b210c31aab07122051f4e30a91d5e75c9609be62a25b684620c97c0903"
 signature: ""
 
 bytecode_sha256: ""

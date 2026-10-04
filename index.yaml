@@ -709,25 +709,25 @@ drivers:
     size_bytes: 49876
     sha256: "25407256014764245bedf1cfc193f94a696854ddedbd224f66fef827df92fb82"
   - name: "tesla_cloud"
-    version: "0.1.0"
+    version: "0.1.1"
     tier: community
     protocol: http
     connectivity: cloud
     setup: [vendor_portal]
     ders: [vehicle]
     control: false
-    size_bytes: 17903
-    sha256: "4f9a43703e787a5e72f7a86964bc21f89ade869e88fe2213e1931c55c241f34c"
+    size_bytes: 18216
+    sha256: "ed608e4a4501f7a9534296989bb083bb7960ebf8456bd760d868cb26069ea484"
   - name: "tesla_vehicle"
-    version: "0.2.3"
+    version: "0.2.4"
     tier: core
     protocol: http
     connectivity: local
     setup: [bridge]
     ders: [vehicle]
     control: true
-    size_bytes: 23888
-    sha256: "480c23e8ec13e075254dded23b4a9e3b93bb91b02ac63d29bd126b672a569bdd"
+    size_bytes: 24166
+    sha256: "0d76b44cd01af02aea995648006148649e8c6d88e97416e37b2f509d5eecddf9"
   - name: "tesla_wall_connector"
     version: "0.1.1"
     tier: community
@@ -738,15 +738,15 @@ drivers:
     size_bytes: 8162
     sha256: "66b6313eda4f68a92a7cc55931baa2408cb6cbb249145f7e6005456fb821d284"
   - name: "teslamate_vehicle"
-    version: "0.1.0"
+    version: "0.1.1"
     tier: community
     protocol: mqtt
     connectivity: local
     setup: [bridge]
     ders: [vehicle]
     control: false
-    size_bytes: 13260
-    sha256: "916cc84bd8df4080ccccbcc9bc968082771e847a6c1f020cfeefc52d4db68a43"
+    size_bytes: 13638
+    sha256: "2a6014b210c31aab07122051f4e30a91d5e75c9609be62a25b684620c97c0903"
   - name: "tibber"
     version: "1.1.2"
     tier: core
@@ -758,15 +758,15 @@ drivers:
     size_bytes: 12472
     sha256: "3cf10b93755fa8b840375f53343e91b5efa98ddffe119a5679b43ee4bfb61c88"
   - name: "vag_vehicle"
-    version: "0.2.0"
+    version: "0.2.1"
     tier: community
     protocol: http
     connectivity: cloud
     setup: [vendor_portal]
     ders: [vehicle]
     control: false
-    size_bytes: 46268
-    sha256: "0e6fc2baa2309b983304247a51759c527bb0f06cad2198949c45bd3ee5614b1d"
+    size_bytes: 46561
+    sha256: "01d3c6d62583e62ea42eaf7bb6b7f98e47b0360d8e65fbfd3210e64f42ccdf73"
   - name: "varta"
     version: "1.1.1"
     tier: community

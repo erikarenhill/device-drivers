@@ -1,5 +1,5 @@
 name: "tesla_vehicle"
-version: "0.2.3"
+version: "0.2.4"
 tier: core
 author: "Sourceful Labs AB"
 protocol: http
@@ -16,9 +16,9 @@ tested_devices:
     notes: "Read-only vehicle SoC + charge limit via Tesla API-compatible HTTP endpoint (e.g. TeslaBLEProxy)."
     min_driver_version: "0.1.0"
 min_host_version: "2.0.0"
-size_bytes: 23888
+size_bytes: 24166
 dkb_id: "tesla_vehicle"
-sha256: "480c23e8ec13e075254dded23b4a9e3b93bb91b02ac63d29bd126b672a569bdd"
+sha256: "0d76b44cd01af02aea995648006148649e8c6d88e97416e37b2f509d5eecddf9"
 signature: ""
 
 bytecode_sha256: ""

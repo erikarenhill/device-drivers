@@ -11,9 +11,16 @@ local dataset_zip = f:read("*a")
 f:close()
 
 local VIN = "WVWZZZTESTVIN0001"
+
+-- Logs get pasted into public issues, so no log line may carry the full VIN.
+local mock_log = host.log
+function host.log(level, message)
+  assert(not tostring(message):find(VIN, 1, true), "log shows the full VIN: " .. tostring(message))
+  return mock_log(level, message)
+end
 local REQ = "req-continuous-1"
-local FILE = "2026-09-26T07-00-00_partial.zip"
-local NEXT = "2026-09-26T07-15-00_partial.zip"
+local FILE = "20260926070000_" .. VIN .. ".zip"
+local NEXT = "20260926071500_" .. VIN .. ".zip"
 local CID = "9b58543e-1c15-4193-91d5-8a14145bebb0@apps_vw-dilab_com"
 local ID = "https://identity.vwgroup.io"
 local PORTAL = "https://eu-data-act.drivesomethinggreater.com"

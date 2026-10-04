@@ -1,5 +1,21 @@
 # Changelog
 
+## vag_vehicle 0.2.1
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
+## tesla_vehicle 0.2.4
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
+## tesla_cloud 0.1.1
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
+## teslamate_vehicle 0.1.1
+
+Show only a VIN's last four characters in log lines (`****1234`). Logs get pasted into public issues, and a full VIN reached srcfl/device-drivers#143 that way. Every log call goes through one masking function, so API errors that quote a URL with the VIN are masked too. The driver still uses the full VIN for API calls and as its serial.
+
 ## vag_vehicle 0.2.0
 
 Sign in with the account email and password instead of a pasted portal cookie, and sign in again when the portal session ends after about an hour (srcfl/device-drivers#143). The sign-in follows evcc's EU Data Act client: the identity form, the password page's `window._IDK` state, then the redirects back to the portal, skipping an optional marketing consent page. It needs an FTW Core with `host.http_request`. The host keeps the session cookies, and every redirect is a separate request checked against `allowed_hosts`. A failed sign-in waits 15 minutes before the next try, so a wrong password cannot lock the account. On an older Core, a pasted `cookie` works as before. `identity.vwgroup.io` joins `http_hosts`, `password` joins `config_secrets`, and the two sign-in form paths per brand are declared: the first in `auth_post_path`, so an older Core still accepts the driver, and the rest in `auth_post_paths`.

@@ -66,7 +66,7 @@ DRIVER = {
   id           = "vag_vehicle",
   name         = "VAG Vehicle (EU Data Act)",
   manufacturer = "Volkswagen Group",
-  version      = "0.2.0",
+  version      = "0.2.1",
   protocols    = { "http" },
   capabilities = { "vehicle" },
   read_only    = true,
@@ -201,6 +201,17 @@ local last = {
   -- Seconds between the car's measurement and the read, when known.
   measured_age_s = nil,
 }
+
+-- Logs get pasted into public issues, and a VIN identifies the owner's
+-- car. Every log line therefore shows only the VIN's last four characters.
+local function log(level, message)
+  message = tostring(message)
+  if type(vin) == "string" and #vin > 4 then
+    local escaped = vin:gsub("%p", "%%%0")
+    message = message:gsub(escaped, "****" .. vin:sub(-4))
+  end
+  host.log(level, message)
+end
 
 ---------------------------------------------------------------------------
 -- ZIP + raw DEFLATE (Lua 5.1). The host returns the portal zip as a
@@ -1142,13 +1153,13 @@ end
 
 function driver_init(config)
   if not config then
-    host.log("error", "vag: config required (vin + brand + cookie)")
+    log("error", "vag: config required (vin + brand + cookie)")
     return
   end
   local err
   brand_name, err = resolve_brand(config.brand)
   if not brand_name then
-    host.log("error", "vag: " .. tostring(err))
+    log("error", "vag: " .. tostring(err))
     return
   end
   vin = config.vin
@@ -1156,7 +1167,7 @@ function driver_init(config)
     vin = vin:gsub("%s+", ""):upper()
   end
   if type(vin) ~= "string" or vin == "" then
-    host.log("error", "vag: `vin` required")
+    log("error", "vag: `vin` required")
     return
   end
   -- Bind identity even when the session cookie is missing so the site
@@ -1170,19 +1181,19 @@ function driver_init(config)
       email = config.email
       password = config.password
     elseif not cookie then
-      host.log("error", "vag: this FTW version cannot sign in with email and password; update FTW or paste the portal Cookie header. Charging does not need this cloud.")
+      log("error", "vag: this FTW version cannot sign in with email and password; update FTW or paste the portal Cookie header. Charging does not need this cloud.")
       return
     end
   end
   if not session_mode() and not cookie then
-    host.log("error", "vag: `email` and `password` required (or a pasted portal `cookie`) after enabling the 15-minute All Data request. Charging does not need this cloud.")
+    log("error", "vag: `email` and `password` required (or a pasted portal `cookie`) after enabling the 15-minute All Data request. Charging does not need this cloud.")
     return
   end
   if host.set_watchdog_timeout_s then
     host.set_watchdog_timeout_s(WATCHDOG_TIMEOUT_S)
   end
   host.set_poll_interval(500)
-  host.log("info", "vag: telemetry-only EU Data Act driver brand=" ..
+  log("info", "vag: telemetry-only EU Data Act driver brand=" ..
     brand_name .. " vin=" .. vin ..
     (session_mode() and " sign-in=email" or " sign-in=cookie"))
 end
@@ -1204,28 +1215,28 @@ function driver_poll()
       if es:find("not in allowed_hosts", 1, true) then
         es = es .. " — add identity.vwgroup.io to capabilities.http.allowed_hosts"
       end
-      host.log("warn", "vag: sign-in failed, next try in 15 min: " .. es)
+      log("warn", "vag: sign-in failed, next try in 15 min: " .. es)
       emit_last()
       return POLL_INTERVAL_MS
     end
     session_ok = true
     request_id = nil
-    host.log("info", "vag: signed in to the EU Data Act portal")
+    log("info", "vag: signed in to the EU Data Act portal")
   end
 
   local id, iderr = ensure_request_id()
   if not id then
     local es = tostring(iderr)
     if session_mode() and not session_ok then
-      host.log("info", "vag: portal session ended, signing in again")
+      log("info", "vag: portal session ended, signing in again")
       emit_last()
       return 1000
     elseif es:match("HTTP 401") or es:match("HTTP 403") then
-      host.log("warn", "vag: portal session expired — refresh config.cookie. Charging continues without vehicle cloud.")
+      log("warn", "vag: portal session expired — refresh config.cookie. Charging continues without vehicle cloud.")
     elseif es:match("HTTP 404") or es:match("no data request") then
-      host.log("warn", "vag: no continuous data request — enable All Data / 15 min on the EU Data Act portal")
+      log("warn", "vag: no continuous data request — enable All Data / 15 min on the EU Data Act portal")
     else
-      host.log("warn", "vag: metadata failed: " .. es)
+      log("warn", "vag: metadata failed: " .. es)
     end
     emit_last()
     return POLL_INTERVAL_MS
@@ -1237,17 +1248,17 @@ function driver_poll()
   if lerr then
     local es = tostring(lerr)
     if session_mode() and not session_ok then
-      host.log("info", "vag: portal session ended, signing in again")
+      log("info", "vag: portal session ended, signing in again")
       request_id = nil
       emit_last()
       return 1000
     elseif es:match("HTTP 401") or es:match("HTTP 403") then
-      host.log("warn", "vag: portal session expired — refresh config.cookie. Charging continues without vehicle cloud.")
+      log("warn", "vag: portal session expired — refresh config.cookie. Charging continues without vehicle cloud.")
       request_id = nil
     elseif es:match("HTTP 404") then
-      host.log("debug", "vag: no dataset files yet")
+      log("debug", "vag: no dataset files yet")
     else
-      host.log("warn", "vag: list failed: " .. es)
+      log("warn", "vag: list failed: " .. es)
     end
     emit_last()
     return POLL_INTERVAL_MS
@@ -1255,7 +1266,7 @@ function driver_poll()
 
   local list, derr = safe_json_decode(list_body)
   if not list then
-    host.log("warn", "vag: list json failed: " .. tostring(derr))
+    log("warn", "vag: list json failed: " .. tostring(derr))
     emit_last()
     return POLL_INTERVAL_MS
   end
@@ -1276,7 +1287,7 @@ function driver_poll()
     "/proxy_api/euda-apim/datadelivery/vehicles/" .. vin .. "/" .. id .. "/download",
     { type = "partial", filename = name })
   if zerr then
-    host.log("warn", "vag: download failed: " .. tostring(zerr))
+    log("warn", "vag: download failed: " .. tostring(zerr))
     emit_last()
     return POLL_INTERVAL_MS
   end
@@ -1285,7 +1296,7 @@ function driver_poll()
 
   local points, perr = parse_dataset(zip)
   if not points then
-    host.log("warn", "vag: dataset decode failed: " .. tostring(perr))
+    log("warn", "vag: dataset decode failed: " .. tostring(perr))
     emit_last()
     return POLL_INTERVAL_MS
   end
@@ -1293,7 +1304,7 @@ function driver_poll()
   local soc_p = lookup(points, SOC_IDS)
   local soc = soc_p and num(soc_p.value) or nil
   if soc == nil then
-    host.log("debug", "vag: dataset had no SoC field")
+    log("debug", "vag: dataset had no SoC field")
     emit_last()
     return POLL_INTERVAL_MS
   end
@@ -1323,7 +1334,7 @@ function driver_poll()
     fresh = measured <= FRESH_AGE_S
   end
   remember(soc, limit, state, ttf, known_age, measured)
-  host.log("info", "vag: " .. (fresh and "emit" or (known_age and "old reading:" or "first file since start, age unknown, stale:")) ..
+  log("info", "vag: " .. (fresh and "emit" or (known_age and "old reading:" or "first file since start, age unknown, stale:")) ..
     " soc=" .. tostring(soc) ..
     " limit=" .. tostring(limit) ..
     " state=" .. tostring(state) ..

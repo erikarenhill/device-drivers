@@ -1619,7 +1619,7 @@
     },
     {
       "catalog_source": true,
-      "catalog_version": "0.1.0",
+      "catalog_version": "0.1.1",
       "driver_id": "tesla_cloud",
       "targets": {
         "blixt-l1": {
@@ -1640,7 +1640,7 @@
     },
     {
       "catalog_source": true,
-      "catalog_version": "0.2.3",
+      "catalog_version": "0.2.4",
       "driver_id": "tesla_vehicle",
       "targets": {
         "blixt-l1": {
@@ -1682,7 +1682,7 @@
     },
     {
       "catalog_source": true,
-      "catalog_version": "0.1.0",
+      "catalog_version": "0.1.1",
       "driver_id": "teslamate_vehicle",
       "targets": {
         "blixt-l1": {
@@ -1724,7 +1724,7 @@
     },
     {
       "catalog_source": true,
-      "catalog_version": "0.2.0",
+      "catalog_version": "0.2.1",
       "driver_id": "vag_vehicle",
       "targets": {
         "blixt-l1": {
